@@ -7,7 +7,7 @@ import path from 'path'
 import { nanoid } from 'nanoid'
 
 const UPLOAD_DIR = path.join(process.cwd(), 'uploads')
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
 const ALLOWED_MIME_TYPES = [
   'image/jpeg',
@@ -21,6 +21,11 @@ const ALLOWED_MIME_TYPES = [
 ]
 
 const PROPERTY_DOCUMENT_CATEGORIES = [
+  'COMPLIANCE_DECLARATION',
+  'ENERGY_CERTIFICATE',
+  'USAGE_LICENSE',
+  'LAND_REGISTRY',
+  'TAX_REGISTER',
   'TITLE_DEED',
   'CERTIFICATE', 
   'PHOTO',
@@ -129,12 +134,12 @@ export async function POST(request: NextRequest, { params }: Params) {
       data: {
         userId: session.user.id,
         propertyId,
-        type: documentType as any,
+        documentType: documentType as any,
         filename: uniqueFilename,
         originalName: file.name,
         mimeType: file.type,
-        size: file.size,
-        url: `/uploads/properties/${propertyId}/${uniqueFilename}`,
+        fileSize: file.size,
+        fileUrl: `/uploads/properties/${propertyId}/${uniqueFilename}`,
         title,
         description
       }
@@ -144,15 +149,15 @@ export async function POST(request: NextRequest, { params }: Params) {
       success: true,
       document: {
         id: document.id,
-        type: document.type,
+        documentType: document.documentType,
         filename: document.filename,
         originalName: document.originalName,
         mimeType: document.mimeType,
-        size: document.size,
-        url: document.url,
+        fileSize: document.fileSize,
+        fileUrl: document.fileUrl,
         title: document.title,
         description: document.description,
-        createdAt: document.createdAt
+        uploadedAt: document.uploadedAt
       }
     })
 
@@ -229,18 +234,19 @@ export async function GET(request: NextRequest, { params }: Params) {
     // Get documents
     const documents = await prisma.document.findMany({
       where: { propertyId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { uploadedAt: 'desc' },
       select: {
         id: true,
-        type: true,
+        documentType: true,
         filename: true,
         originalName: true,
         mimeType: true,
-        size: true,
-        url: true,
+        fileSize: true,
+        fileUrl: true,
         title: true,
         description: true,
-        createdAt: true,
+        uploadedAt: true,
+        verified: true,
         userId: true
       }
     })

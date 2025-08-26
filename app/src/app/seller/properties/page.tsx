@@ -226,8 +226,7 @@ export default function PropertiesPage() {
                       size="sm"
                       className="flex-1"
                       onClick={() => {
-                        // TODO: Implement property detail view for seller
-                        console.log('View property:', property.code)
+                        router.push(`/seller/properties/${property.id}`)
                       }}
                     >
                       <Eye className="mr-2 h-4 w-4" />
@@ -238,8 +237,7 @@ export default function PropertiesPage() {
                       size="sm"
                       className="flex-1"
                       onClick={() => {
-                        // TODO: Implement property edit functionality
-                        console.log('Edit property:', property.code)
+                        router.push(`/seller/properties/${property.id}/edit`)
                       }}
                       disabled={property.complianceStatus === 'APPROVED'}
                       title={property.complianceStatus === 'APPROVED' ? 'Cannot edit approved properties' : 'Edit property'}

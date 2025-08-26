@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { signIn, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -14,10 +14,24 @@ import Header from '@/components/header'
 
 export default function SignInPage() {
   const router = useRouter()
+  const { data: session, status } = useSession()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      // Redirect based on user role
+      if (session.user.role === 'ADMIN') {
+        router.push('/admin')
+      } else if (session.user.role === 'BUYER') {
+        router.push('/buyer/dashboard')
+      } else if (session.user.role === 'SELLER') {
+        router.push('/seller/dashboard')
+      }
+    }
+  }, [session, status, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -89,9 +89,9 @@ export default function KycPage() {
         }
       } else {
         // Ready to start KYC - both email and mobile verified
-        // Show a button to start KYC instead of auto-starting
-        setStage('verification')
-        setVerificationStep('mobile') // Show as complete, ready for KYC button
+        // Auto-start the KYC session since verifications are complete
+        console.log('[KYC Page] Both email and mobile verified, starting KYC session')
+        fetchKycSession()
       }
     } catch (error) {
       console.error('Failed to check KYC status:', error)

@@ -1,11 +1,11 @@
 # caenhebo-alpha
 
 ## 🚨 IMPORTANT: PORT CONFIGURATION
-**This project runs EXCLUSIVELY on PORT 3004**
-- Development: http://localhost:3004
-- Production: http://155.138.165.47:3004
+**This project runs EXCLUSIVELY on PORT 3018**
+- Development: http://localhost:3018
+- Production: http://155.138.165.47:3018
 - DO NOT switch ports or use any other port
-- All environment files must use PORT=3004
+- All environment files must use PORT=3018
 
 ## 🏦 STRIGA Expert Agent Available
 For any Striga API, KYC, or payment issues, use the specialized STRIGA agent:
@@ -108,6 +108,41 @@ Test Users:
 ./scripts/protect-database.sh
 ```
 
+## 🧪 Debug and Test Tools
+
+### KYC Verification Debug Pages
+These tools help diagnose KYC and verification issues:
+
+1. **Mobile Verification Debug Tool**: http://155.138.165.47:3018/test-mobile-verification.html
+   - Tests authentication flow
+   - Checks Striga user status
+   - Shows KYC status response
+   - Highlights phoneVerified/mobileVerified values
+   - Identifies verification stage issues
+
+2. **Simple Browser Test Guide**: http://155.138.165.47:3018/simple-browser-test.html
+   - Step-by-step manual testing instructions
+   - Shows expected behavior at each stage
+   - Helps identify where the flow breaks
+
+### Test Scripts (in app directory)
+- `test-kyc-sync.js` - Direct Striga API testing
+- `direct-test-kyc.js` - Database values and logic verification
+- `manual-test-kyc.sh` - Curl-based API testing
+- `test-kyc-detailed.js` - Detailed session and KYC flow testing
+
+### Using the Debug Tools
+1. When users report KYC issues, first use the Mobile Verification Debug Tool
+2. Click through buttons 1-4 in order to test the complete flow
+3. Look for highlighted fields showing verification status
+4. Check if the stage matches the verification status
+
+Common issues these tools help diagnose:
+- Phone/email verification not syncing with Striga
+- KYC stage stuck at wrong step
+- Session authentication problems
+- Boolean value conversion issues (1/0 vs true/false)
+
 ## 🚨 CRITICAL: PREVENTING FEATURE BREAKAGE
 
 ### MANDATORY RULES TO PREVENT BREAKING EXISTING FEATURES
@@ -118,8 +153,8 @@ Test Users:
    ./test-critical-features.sh
    
    # Or test manually:
-   curl http://localhost:3004/api/kyc/status -H "Cookie: <session-cookie>"
-   curl http://localhost:3004/api/auth/session -H "Cookie: <session-cookie>"
+   curl http://localhost:3018/api/kyc/status -H "Cookie: <session-cookie>"
+   curl http://localhost:3018/api/auth/session -H "Cookie: <session-cookie>"
    # Save the responses to compare after changes
    ```
 
@@ -141,15 +176,15 @@ Test Users:
    ```bash
    # Run this checklist after ANY modification:
    # 1. Login works
-   curl -X POST http://localhost:3004/api/auth/callback/credentials \
+   curl -X POST http://localhost:3018/api/auth/callback/credentials \
      -H "Content-Type: application/json" \
      -d '{"email":"seller@example.com","password":"password123"}'
    
    # 2. KYC status endpoint responds
-   curl http://localhost:3004/api/kyc/status -H "Cookie: <session-cookie>"
+   curl http://localhost:3018/api/kyc/status -H "Cookie: <session-cookie>"
    
    # 3. Dashboard loads without errors
-   curl http://localhost:3004/seller/dashboard -H "Cookie: <session-cookie>"
+   curl http://localhost:3018/seller/dashboard -H "Cookie: <session-cookie>"
    ```
 
 5. **MAINTAIN A FEATURE STATUS LOG**
@@ -217,8 +252,8 @@ Caenhebo Alpha is a real estate transaction platform for Portugal that supports:
 - 6-stage property transaction workflow
 
 ## 🛠️ Development Configuration
-- **Port**: 3004 (NEVER change this)
+- **Port**: 3018 (NEVER change this)
 - **PM2 Process Name**: caenhebo-alpha
-- **Start Command**: `PORT=3004 pm2 start "npm run dev" --name caenhebo-alpha`
-- **Access URL**: http://155.138.165.47:3004
-- **Environment**: All .env files must specify PORT=3004 and NEXTAUTH_URL with port 3004
+- **Start Command**: `PORT=3018 pm2 start "npm run dev" --name caenhebo-alpha`
+- **Access URL**: http://155.138.165.47:3018
+- **Environment**: All .env files must specify PORT=3018 and NEXTAUTH_URL with port 3018

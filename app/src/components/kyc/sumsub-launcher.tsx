@@ -1,6 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { CheckCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 
 interface SumSubLauncherProps {
   token: string
@@ -16,6 +20,15 @@ declare global {
 }
 
 export function SumSubLauncher({ token, onComplete, onError }: SumSubLauncherProps) {
+  const [verificationComplete, setVerificationComplete] = useState(false)
+  const router = useRouter()
+  const { data: session } = useSession()
+
+  const handleGoToDashboard = () => {
+    const dashboardUrl = session?.user.role === 'BUYER' ? '/buyer/dashboard' : '/seller/dashboard'
+    router.push(dashboardUrl)
+  }
+
   useEffect(() => {
     // Load the SumSub SDK script
     const script = document.createElement('script')
@@ -59,9 +72,17 @@ export function SumSubLauncher({ token, onComplete, onError }: SumSubLauncherPro
             onMessage: (type: string, payload: any) => {
               console.log('WebSDK onMessage', type, payload)
               
-              // Handle completion
+              // Handle different message types
               if (type === 'idCheck.onApplicantSubmitted') {
+                // Application submitted successfully
+                setVerificationComplete(true)
                 onComplete?.()
+              } else if (type === 'idCheck.onApplicantReady') {
+                // Applicant is ready (all steps completed)
+                setVerificationComplete(true)
+              } else if (type === 'idCheck.onComplete') {
+                // Verification process completed
+                setVerificationComplete(true)
               }
             },
           })
@@ -81,6 +102,25 @@ export function SumSubLauncher({ token, onComplete, onError }: SumSubLauncherPro
       }
     }
   }, [token, onComplete, onError])
+  
+  if (verificationComplete) {
+    return (
+      <div className="text-center py-16">
+        <CheckCircle className="h-24 w-24 text-green-500 mx-auto mb-6" />
+        <h2 className="text-3xl font-bold mb-4">Your profile has been verified!</h2>
+        <p className="text-gray-600 mb-8 text-lg">
+          Thank you for completing the verification process. Your identity is being reviewed.
+        </p>
+        <Button 
+          onClick={handleGoToDashboard}
+          size="lg"
+          className="px-8"
+        >
+          Go to your dashboard
+        </Button>
+      </div>
+    )
+  }
   
   return (
     <div id="sumsub-websdk-container" style={{ width: '100%', minHeight: '600px' }}>

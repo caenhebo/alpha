@@ -70,11 +70,14 @@ enum DocumentType {
   CERTIFICATE
   PHOTO
   FLOOR_PLAN
+  OTHER
+  USAGE_LICENSE
+  LAND_REGISTRY
+  TAX_REGISTER
   // Transaction Documents
   CONTRACT
   PROOF_OF_PAYMENT
   LEGAL_DOCUMENT
-  OTHER
 }
 
 // Main User model
@@ -116,11 +119,13 @@ model User {
   profile           Profile?
   buyerTransactions Transaction[] @relation("BuyerTransactions")
   sellerTransactions Transaction[] @relation("SellerTransactions")
+  sellerProperties  Property[] @relation("SellerProperties")
   documents         Document[]
   wallets           Wallet[]
   notifications     Notification[]
   digitalIbans      DigitalIban[]
   propertyInterests PropertyInterest[]
+  propertyAudits    PropertyAudit[] @relation("AdminAudits")
   
   @@map("users")
 }
@@ -184,15 +189,25 @@ model Property {
   complianceNotes  String?
   valuationPrice   Decimal?
   
+  // Interview tracking
+  interviewDate    DateTime?
+  interviewStatus  String @default("NOT_SCHEDULED") // NOT_SCHEDULED, SCHEDULED, COMPLETED
+  interviewNotes   String?
+  
+  // Final approval
+  finalApprovalStatus String @default("PENDING") // PENDING, APPROVED, REJECTED
+  
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
   // Relations
+  seller       User @relation("SellerProperties", fields: [sellerId], references: [id])
   transactions Transaction[]
   documents    Document[]
   interests    PropertyInterest[]
   interviews   Interview[]
+  audits       PropertyAudit[]
   
   @@map("properties")
 }
@@ -334,16 +349,18 @@ model Document {
   property   Property? @relation(fields: [propertyId], references: [id])
   
   // Document details
-  type        DocumentType
+  documentType DocumentType @map("type")
   filename    String
-  originalName String
+  originalName String?
+  fileUrl     String @map("url")
   mimeType    String
-  size        Int
-  url         String
+  fileSize    Int @map("size")
   
   // Metadata
   title       String?
   description String?
+  verified    Boolean @default(false)
+  uploadedAt  DateTime @default(now())
   
   // Digital signature
   signed      Boolean @default(false)
@@ -586,4 +603,21 @@ model EscrowDetails {
   updatedAt       DateTime @updatedAt
   
   @@map("escrow_details")
+}
+
+// Property audit tracking
+model PropertyAudit {
+  id         String @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  // Audit details
+  adminId    String
+  admin      User @relation("AdminAudits", fields: [adminId], references: [id])
+  notes      String
+  
+  // Timestamps
+  createdAt  DateTime @default(now())
+  
+  @@map("property_audits")
 }

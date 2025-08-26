@@ -1,7 +1,24 @@
+import { redirect } from 'next/navigation'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { RegisterForm } from '@/components/auth/register-form'
 import Header from '@/components/header'
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
+  // Check if user is already logged in
+  const session = await getServerSession(authOptions)
+  
+  if (session?.user) {
+    // Redirect based on user role
+    if (session.user.role === 'ADMIN') {
+      redirect('/admin')
+    } else if (session.user.role === 'BUYER') {
+      redirect('/buyer/dashboard')
+    } else if (session.user.role === 'SELLER') {
+      redirect('/seller/dashboard')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -40,7 +57,7 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
-      </div>
+    </div>
     </div>
   )
 }

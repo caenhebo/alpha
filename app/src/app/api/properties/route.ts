@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,6 +33,7 @@ export async function GET(request: NextRequest) {
         where: { sellerId: session.user.id },
         orderBy: { createdAt: 'desc' },
         include: {
+          documents: true,
           _count: {
             select: {
               interests: true,
@@ -58,9 +57,15 @@ export async function GET(request: NextRequest) {
         area: property.area,
         bedrooms: property.bedrooms,
         bathrooms: property.bathrooms,
+        listingStatus: 'ACTIVE', // Default to ACTIVE as there's no listingStatus in schema
         complianceStatus: property.complianceStatus,
         complianceNotes: property.complianceNotes,
         valuationPrice: property.valuationPrice?.toString(),
+        documents: property.documents,
+        interviewDate: property.interviewDate,
+        interviewStatus: property.interviewStatus,
+        interviewNotes: property.interviewNotes,
+        finalApprovalStatus: property.finalApprovalStatus,
         createdAt: property.createdAt.toISOString(),
         updatedAt: property.updatedAt.toISOString(),
         interestCount: property._count.interests,
@@ -71,6 +76,7 @@ export async function GET(request: NextRequest) {
       const allProperties = await prisma.property.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
+          documents: true,
           _count: {
             select: {
               interests: true,
@@ -94,10 +100,16 @@ export async function GET(request: NextRequest) {
         area: property.area,
         bedrooms: property.bedrooms,
         bathrooms: property.bathrooms,
+        listingStatus: 'ACTIVE', // Default to ACTIVE as there's no listingStatus in schema
         complianceStatus: property.complianceStatus,
         complianceNotes: property.complianceNotes,
         valuationPrice: property.valuationPrice?.toString(),
         sellerId: property.sellerId,
+        documents: property.documents,
+        interviewDate: property.interviewDate,
+        interviewStatus: property.interviewStatus,
+        interviewNotes: property.interviewNotes,
+        finalApprovalStatus: property.finalApprovalStatus,
         createdAt: property.createdAt.toISOString(),
         updatedAt: property.updatedAt.toISOString(),
         interestCount: property._count.interests,

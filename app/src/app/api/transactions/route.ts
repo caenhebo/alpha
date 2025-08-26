@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,20 +16,26 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const role = searchParams.get('role') // 'buyer' or 'seller'
     const status = searchParams.get('status') // filter by status
+    const propertyId = searchParams.get('propertyId') // filter by property
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
 
     // Build where clause based on user role
-    const where: any = {
-      OR: []
-    }
+    const where: any = {}
 
-    if (!role || role === 'buyer') {
-      where.OR.push({ buyerId: session.user.id })
-    }
-    
-    if (!role || role === 'seller') {
-      where.OR.push({ sellerId: session.user.id })
+    // If propertyId is specified, filter by that property only
+    if (propertyId) {
+      where.propertyId = propertyId
+    } else {
+      // Otherwise filter by user role
+      where.OR = []
+      if (!role || role === 'buyer') {
+        where.OR.push({ buyerId: session.user.id })
+      }
+      
+      if (!role || role === 'seller') {
+        where.OR.push({ sellerId: session.user.id })
+      }
     }
 
     if (status) {

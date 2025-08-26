@@ -33,7 +33,10 @@ export async function GET(request: NextRequest, { params }: Params) {
       )
     }
 
-    const [type, entityId, filename] = pathSegments
+    // Handle both /uploads/properties/id/filename and /api/uploads/properties/id/filename
+    const type = pathSegments[0]
+    const entityId = pathSegments[1]
+    const filename = pathSegments.slice(2).join('/')
     
     if (!['properties', 'transactions'].includes(type)) {
       return NextResponse.json(
@@ -103,8 +106,8 @@ export async function GET(request: NextRequest, { params }: Params) {
       // Set appropriate headers
       const headers = new Headers({
         'Content-Type': document.mimeType,
-        'Content-Length': document.size.toString(),
-        'Content-Disposition': `inline; filename="${document.originalName}"`,
+        'Content-Length': document.fileSize.toString(),
+        'Content-Disposition': `inline; filename="${document.originalName || document.filename}"`,
         'Cache-Control': 'private, max-age=3600'
       })
       

@@ -1,7 +1,7 @@
 'use client'
 
 import { useSession, signOut } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -10,10 +10,12 @@ import { LogOut } from 'lucide-react'
 import StrigaConfig from '@/components/admin/striga-config'
 import SystemOverview from '@/components/admin/system-overview'
 import PropertyCompliance from '@/components/admin/property-compliance'
+import UserManagement from '@/components/admin/user-management'
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     if (status === 'loading') return
@@ -54,7 +56,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <Tabs defaultValue="overview" className="w-full">
+        <Tabs defaultValue={searchParams.get('tab') || "overview"} className="w-full">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="properties">Properties</TabsTrigger>
@@ -76,15 +78,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="users">
-            <Card>
-              <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>View and manage platform users</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-500">User management coming soon...</p>
-              </CardContent>
-            </Card>
+            <UserManagement />
           </TabsContent>
 
           <TabsContent value="transactions">

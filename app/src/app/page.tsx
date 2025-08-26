@@ -1,9 +1,26 @@
+import { redirect } from 'next/navigation'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Header from "@/components/header"
 
-export default function Home() {
+export default async function Home() {
+  // Check if user is already logged in
+  const session = await getServerSession(authOptions)
+  
+  if (session?.user) {
+    // Redirect based on user role
+    if (session.user.role === 'ADMIN') {
+      redirect('/admin')
+    } else if (session.user.role === 'BUYER') {
+      redirect('/buyer/dashboard')
+    } else if (session.user.role === 'SELLER') {
+      redirect('/seller/dashboard')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Header */}

@@ -10,27 +10,36 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Home, FileText, Users, TrendingUp, Shield, Loader2, Building } from 'lucide-react'
 import WalletDisplay from '@/components/wallet/wallet-display'
 
+interface DashboardData {
+  kycStatus: string
+  propertyStats: {
+    listedProperties: number
+    pendingOffers: number
+    activeBuyers: number
+    propertiesSold: number
+  }
+  transactionStats: {
+    totalOffers: number
+    activeTransactions: number
+    completedSales: number
+  }
+  properties: any[]
+  totalProperties: number
+  hasWallets: boolean
+  user: {
+    emailVerified: boolean
+    phoneVerified: boolean
+  }
+}
+
 export default function SellerDashboard() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const [isInitiatingKYC, setIsInitiatingKYC] = useState(false)
-  const [kycError, setKycError] = useState('')
-  const [liveKycStatus, setLiveKycStatus] = useState<string | null>(null)
-  const [isCheckingKyc, setIsCheckingKyc] = useState(true)
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
   const [walletData, setWalletData] = useState<any>(null)
   const [isLoadingWallets, setIsLoadingWallets] = useState(false)
-  const [walletError, setWalletError] = useState<string>('')
-  const [propertyStats, setPropertyStats] = useState({
-    listedProperties: 0,
-    pendingOffers: 0,
-    activeBuyers: 0,
-    propertiesSold: 0
-  })
-  const [transactionStats, setTransactionStats] = useState({
-    totalOffers: 0,
-    activeTransactions: 0,
-    completedSales: 0
-  })
 
   useEffect(() => {
     if (status === 'loading') return
@@ -41,138 +50,62 @@ export default function SellerDashboard() {
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
-      fetchLiveKycStatus()
+      fetchDashboardData()
     }
   }, [session, status])
 
-  useEffect(() => {
-    if (liveKycStatus === 'PASSED') {
-      fetchWallets()
-      fetchPropertyStats()
-      fetchTransactionStats()
-    }
-  }, [liveKycStatus])
-
-  const fetchLiveKycStatus = async () => {
+  const fetchDashboardData = async () => {
     try {
-      setIsCheckingKyc(true)
-      console.log('[Seller Dashboard] Fetching live KYC status...')
+      setIsLoading(true)
+      const response = await fetch('/api/seller/dashboard-data')
       
-      const response = await fetch('/api/kyc/status')
       if (response.ok) {
         const data = await response.json()
-        console.log('[Seller Dashboard] KYC status:', data.kycStatus)
-        setLiveKycStatus(data.kycStatus)
+        setDashboardData(data)
+        
+        // If KYC passed and has wallets, fetch wallet data
+        if (data.kycStatus === 'PASSED' && data.hasWallets) {
+          fetchWallets()
+        }
       } else {
-        console.error('[Seller Dashboard] Failed to fetch KYC status:', {
-          status: response.status,
-          statusText: response.statusText,
-          url: response.url
-        })
-        setLiveKycStatus(session?.user.kycStatus || null)
+        setError('Failed to load dashboard data')
       }
     } catch (error) {
-      console.error('[Seller Dashboard] Error fetching KYC status:', error)
-      setLiveKycStatus(session?.user.kycStatus || null)
+      console.error('Dashboard error:', error)
+      setError('Network error loading dashboard')
     } finally {
-      setIsCheckingKyc(false)
+      setIsLoading(false)
     }
   }
 
   const fetchWallets = async () => {
     setIsLoadingWallets(true)
-    setWalletError('')
     try {
-      console.log('[Seller Dashboard] Fetching wallets...')
       const response = await fetch('/api/wallets')
-      
       if (response.ok) {
         const data = await response.json()
-        console.log('[Seller Dashboard] Wallets fetched successfully:', data)
         setWalletData(data)
-      } else {
-        const errorData = await response.json()
-        console.error('[Seller Dashboard] Failed to fetch wallets:', {
-          status: response.status,
-          error: errorData
-        })
-        
-        let errorMessage = 'Failed to fetch wallets'
-        if (response.status === 401) {
-          errorMessage = 'Authentication required. Please sign in again.'
-        } else if (response.status === 400) {
-          if (errorData.kycStatus) {
-            errorMessage = `KYC verification required. Status: ${errorData.kycStatus}`
-          } else {
-            errorMessage = errorData.error || 'Bad request'
-          }
-        } else {
-          errorMessage = errorData.error || `Server error (${response.status})`
-        }
-        
-        setWalletError(errorMessage)
       }
     } catch (error) {
-      console.error('[Seller Dashboard] Error fetching wallets:', error)
-      setWalletError('Network error. Please check your connection and try again.')
+      console.error('Wallet error:', error)
     } finally {
       setIsLoadingWallets(false)
     }
   }
 
-  const fetchPropertyStats = async () => {
-    try {
-      const response = await fetch('/api/properties')
-      if (response.ok) {
-        const data = await response.json()
-        const properties = data.properties || []
-        
-        setPropertyStats({
-          listedProperties: properties.length,
-          pendingOffers: properties.reduce((sum: number, p: any) => sum + (p.transactionCount || 0), 0),
-          activeBuyers: properties.reduce((sum: number, p: any) => sum + (p.interestCount || 0), 0),
-          propertiesSold: properties.filter((p: any) => p.transactionCount > 0).length
-        })
-      }
-    } catch (error) {
-      console.error('Error fetching property stats:', error)
-    }
+  if (status === 'loading' || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
   }
 
-  const fetchTransactionStats = async () => {
-    try {
-      const response = await fetch('/api/transactions?role=seller')
-      if (response.ok) {
-        const data = await response.json()
-        const transactions = data.transactions || []
-        
-        const stats = {
-          totalOffers: transactions.length,
-          activeTransactions: transactions.filter((t: any) => 
-            ['OFFER', 'NEGOTIATION', 'AGREEMENT', 'ESCROW', 'CLOSING'].includes(t.status)
-          ).length,
-          completedSales: transactions.filter((t: any) => t.status === 'COMPLETED').length
-        }
-        
-        setTransactionStats(stats)
-      }
-    } catch (error) {
-      console.error('Error fetching transaction stats:', error)
-    }
-  }
-
-  if (status === 'loading') {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
-  }
-
-  if (!session || session.user.role !== 'SELLER') {
+  if (!session || session.user.role !== 'SELLER' || !dashboardData) {
     return null
   }
 
-  const initiateKYC = async () => {
-    // Redirect to KYC form page
-    router.push('/kyc')
-  }
+  const { kycStatus, propertyStats, transactionStats, properties, totalProperties } = dashboardData
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -183,68 +116,47 @@ export default function SellerDashboard() {
           <p className="text-gray-600 mt-2">Welcome back, {session.user.email}</p>
         </div>
 
-        {/* KYC Alert - Only show if not checking and not approved */}
-        {!isCheckingKyc && liveKycStatus !== 'PASSED' && (
+        {/* KYC Alert */}
+        {kycStatus !== 'PASSED' && (
           <Alert className="mb-6 border-amber-200 bg-amber-50">
             <Shield className="h-4 w-4 text-amber-600" />
             <AlertDescription className="flex items-center justify-between">
               <div>
                 <strong className="text-amber-900">
-                  {liveKycStatus === 'REJECTED' 
+                  {kycStatus === 'REJECTED' 
                     ? 'KYC Verification Required'
                     : 'Complete your KYC to start selling properties'}
                 </strong>
                 <p className="text-sm text-amber-700 mt-1">
-                  {liveKycStatus === 'INITIATED' 
+                  {kycStatus === 'INITIATED' 
                     ? 'Your KYC verification is in progress. This usually takes a few minutes.'
-                    : liveKycStatus === 'REJECTED'
+                    : kycStatus === 'REJECTED'
                     ? 'Please contact support to resolve your KYC verification.'
                     : 'Verify your identity to list properties and receive payments through digital IBAN.'}
                 </p>
               </div>
-              {liveKycStatus !== 'INITIATED' && liveKycStatus !== 'REJECTED' && (
-                <Button 
-                  onClick={initiateKYC}
-                  disabled={isInitiatingKYC}
-                  className="ml-4"
-                >
-                  {isInitiatingKYC ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Starting KYC...
-                    </>
-                  ) : (
-                    <>
-                      <Shield className="mr-2 h-4 w-4" />
-                      Start KYC Verification
-                    </>
-                  )}
+              {kycStatus !== 'INITIATED' && kycStatus !== 'REJECTED' && (
+                <Button onClick={() => router.push('/kyc')} className="ml-4">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Start KYC Verification
                 </Button>
               )}
-              {liveKycStatus === 'INITIATED' && (
+              {kycStatus === 'INITIATED' && (
                 <Button 
-                  onClick={fetchLiveKycStatus}
-                  disabled={isCheckingKyc}
+                  onClick={fetchDashboardData}
                   variant="outline"
                   className="ml-4"
                 >
-                  {isCheckingKyc ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Checking...
-                    </>
-                  ) : (
-                    'Check Status'
-                  )}
+                  Check Status
                 </Button>
               )}
             </AlertDescription>
           </Alert>
         )}
 
-        {kycError && (
+        {error && (
           <Alert variant="destructive" className="mb-6">
-            <AlertDescription>{kycError}</AlertDescription>
+            <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
@@ -307,7 +219,7 @@ export default function SellerDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className={liveKycStatus !== 'PASSED' ? 'opacity-60' : ''}>
+          <Card className={kycStatus !== 'PASSED' ? 'opacity-60' : ''}>
             <CardHeader>
               <CardTitle>List a Property</CardTitle>
               <CardDescription>Start the property compliance process</CardDescription>
@@ -320,8 +232,8 @@ export default function SellerDashboard() {
                 <div className="space-y-3">
                   <Button 
                     className="w-full"
-                    disabled={liveKycStatus !== 'PASSED'}
-                    title={liveKycStatus !== 'PASSED' ? 'Complete KYC verification to list properties' : ''}
+                    disabled={kycStatus !== 'PASSED'}
+                    title={kycStatus !== 'PASSED' ? 'Complete KYC verification to list properties' : ''}
                     onClick={() => router.push('/seller/properties/new')}
                   >
                     <Home className="mr-2 h-4 w-4" />
@@ -330,15 +242,15 @@ export default function SellerDashboard() {
                   <Button 
                     variant="outline"
                     className="w-full"
-                    disabled={liveKycStatus !== 'PASSED'}
-                    title={liveKycStatus !== 'PASSED' ? 'Complete KYC verification to manage properties' : ''}
+                    disabled={kycStatus !== 'PASSED'}
+                    title={kycStatus !== 'PASSED' ? 'Complete KYC verification to manage properties' : ''}
                     onClick={() => router.push('/seller/properties')}
                   >
                     <Building className="mr-2 h-4 w-4" />
                     Manage Properties
                   </Button>
                   
-                  {liveKycStatus === 'PASSED' && (
+                  {kycStatus === 'PASSED' && (
                     <Button 
                       variant="outline"
                       className="w-full"
@@ -353,10 +265,17 @@ export default function SellerDashboard() {
             </CardContent>
           </Card>
 
-          <div className={liveKycStatus !== 'PASSED' ? 'opacity-60' : ''}>
-            {liveKycStatus === 'PASSED' && (
+          <div className={kycStatus !== 'PASSED' ? 'opacity-60' : ''}>
+            {kycStatus === 'PASSED' && (
               <div>
-                {isLoadingWallets ? (
+                {walletData ? (
+                  <WalletDisplay
+                    userRole="SELLER"
+                    primaryWallet={walletData.primaryWallet}
+                    allWallets={walletData.wallets}
+                    onRefresh={fetchWallets}
+                  />
+                ) : dashboardData.hasWallets && isLoadingWallets ? (
                   <Card>
                     <CardHeader>
                       <CardTitle>Your Payment Account</CardTitle>
@@ -367,40 +286,7 @@ export default function SellerDashboard() {
                       Loading wallets...
                     </CardContent>
                   </Card>
-                ) : walletData ? (
-                  <WalletDisplay
-                    userRole="SELLER"
-                    primaryWallet={walletData.primaryWallet}
-                    allWallets={walletData.wallets}
-                    onRefresh={fetchWallets}
-                  />
-                ) : walletError ? (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Your Payment Account</CardTitle>
-                      <CardDescription>Error loading your EUR account</CardDescription>
-                    </CardHeader>
-                    <CardContent className="text-center py-8">
-                      <Alert variant="destructive" className="mb-4">
-                        <AlertDescription>{walletError}</AlertDescription>
-                      </Alert>
-                      <Button 
-                        onClick={fetchWallets}
-                        disabled={isLoadingWallets}
-                        variant="outline"
-                      >
-                        {isLoadingWallets ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Retrying...
-                          </>
-                        ) : (
-                          'Retry Loading Wallets'
-                        )}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ) : (
+                ) : !dashboardData.hasWallets ? (
                   <Card>
                     <CardHeader>
                       <CardTitle>Your Payment Account</CardTitle>
@@ -432,19 +318,15 @@ export default function SellerDashboard() {
                           onClick={async () => {
                             setIsLoadingWallets(true)
                             try {
-                              // Create EUR wallet/IBAN
                               const response = await fetch('/api/iban/create', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' }
                               })
                               
                               if (response.ok) {
-                                // Refresh wallets after creation
                                 setTimeout(() => {
                                   fetchWallets()
                                 }, 2000)
-                              } else {
-                                console.error('Failed to create payment account')
                               }
                             } catch (error) {
                               console.error('Error creating payment account:', error)
@@ -472,11 +354,11 @@ export default function SellerDashboard() {
                       </div>
                     </CardContent>
                   </Card>
-                )}
+                ) : null}
               </div>
             )}
             
-            {liveKycStatus !== 'PASSED' && (
+            {kycStatus !== 'PASSED' && (
               <Card>
                 <CardHeader>
                   <CardTitle>Your Payment Account</CardTitle>
@@ -491,13 +373,13 @@ export default function SellerDashboard() {
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium">KYC Status:</span>
                       <span className={`text-sm ${
-                        liveKycStatus === 'PASSED' ? 'text-green-600 font-medium' : 
-                        liveKycStatus === 'REJECTED' ? 'text-red-600' : 
+                        kycStatus === 'PASSED' ? 'text-green-600 font-medium' : 
+                        kycStatus === 'REJECTED' ? 'text-red-600' : 
                         'text-amber-600'
                       }`}>
-                        {liveKycStatus === 'PASSED' ? 'Approved' : 
-                         liveKycStatus === 'REJECTED' ? 'Rejected' : 
-                         liveKycStatus === 'INITIATED' ? 'In Review' : 
+                        {kycStatus === 'PASSED' ? 'Approved' : 
+                         kycStatus === 'REJECTED' ? 'Rejected' : 
+                         kycStatus === 'INITIATED' ? 'In Review' : 
                          'Pending'}
                       </span>
                     </div>
@@ -520,16 +402,67 @@ export default function SellerDashboard() {
             <CardDescription>Manage your active property listings</CardDescription>
           </CardHeader>
           <CardContent>
-            {liveKycStatus !== 'PASSED' ? (
+            {kycStatus !== 'PASSED' ? (
               <div className="text-center py-8">
                 <Shield className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                 <p className="text-sm text-gray-500">
                   Complete KYC verification to start listing properties.
                 </p>
               </div>
+            ) : properties.length > 0 ? (
+              <div className="space-y-4">
+                {properties.map((property) => (
+                  <div key={property.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900">{property.title}</h4>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {property.city}, {property.state} • {property.bedrooms} bed • {property.bathrooms} bath • {property.area}m²
+                        </p>
+                        <div className="flex items-center gap-4 mt-2">
+                          <span className="text-lg font-bold text-green-600">€{parseInt(property.price).toLocaleString()}</span>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            property.listingStatus === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                            property.listingStatus === 'SOLD' ? 'bg-gray-100 text-gray-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {property.listingStatus}
+                          </span>
+                          {property.interestCount > 0 && (
+                            <span className="text-sm text-gray-500">
+                              {property.interestCount} interested
+                            </span>
+                          )}
+                          {property.transactionCount > 0 && (
+                            <span className="text-sm text-gray-500">
+                              {property.transactionCount} offers
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/seller/properties/${property.id}`)}
+                      >
+                        Manage
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {totalProperties > 5 && (
+                  <Button 
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => router.push('/seller/properties')}
+                  >
+                    View All Properties ({totalProperties})
+                  </Button>
+                )}
+              </div>
             ) : (
               <p className="text-sm text-gray-500 text-center py-8">
-                No properties listed yet. Click "Add New Property" to get started.
+                No properties listed yet. Click "List New Property" to get started.
               </p>
             )}
           </CardContent>

@@ -55,6 +55,13 @@ export async function GET(request: NextRequest) {
     let emailVerified = user.emailVerified
     let phoneVerified = user.phoneVerified
 
+    console.log('[KYC Status] Initial values from DB:', {
+      emailVerified,
+      phoneVerified,
+      phoneVerifiedType: typeof phoneVerified,
+      kycStatus: actualKycStatus
+    })
+
     // If user has Striga ID, fetch live status from Striga
     if (user.strigaUserId) {
       try {
@@ -68,7 +75,8 @@ export async function GET(request: NextRequest) {
           strigaUserId: user.strigaUserId,
           kycStatus: strigaUser.KYC?.status,
           emailVerified: strigaUser.KYC?.emailVerified,
-          mobileVerified: strigaUser.KYC?.mobileVerified
+          mobileVerified: strigaUser.KYC?.mobileVerified,
+          fullKYC: JSON.stringify(strigaUser.KYC)
         })
         
         // Get live verification status from Striga
@@ -84,6 +92,8 @@ export async function GET(request: NextRequest) {
           mappedStatus = 'REJECTED'
         } else if (strigaKycStatus === 'IN_REVIEW' || strigaKycStatus === 'PENDING') {
           mappedStatus = 'INITIATED'
+        } else if (strigaKycStatus === 'NOT_STARTED') {
+          mappedStatus = 'PENDING' // Map NOT_STARTED to PENDING
         }
         
         // Update our database if status has changed
@@ -114,6 +124,14 @@ export async function GET(request: NextRequest) {
         actualKycStatus = mappedStatus
         emailVerified = strigaEmailVerified ? new Date() : null
         phoneVerified = strigaMobileVerified
+        
+        console.log('[KYC Status] After Striga sync:', {
+          actualKycStatus,
+          emailVerified: !!emailVerified,
+          phoneVerified,
+          phoneVerifiedType: typeof phoneVerified,
+          strigaMobileVerified
+        })
       } catch (error) {
         console.error('[KYC Status] Failed to fetch from Striga:', error)
         // Continue with local status if Striga fetch fails
@@ -123,11 +141,15 @@ export async function GET(request: NextRequest) {
     // Determine the current stage based on user status
     let stage: 'form' | 'email_verification' | 'mobile_verification' | 'kyc_ready' | 'kyc_initiated' | 'kyc_passed' | 'kyc_rejected'
     
+    // Ensure proper boolean evaluation for verification status
+    const isEmailVerified = !!emailVerified
+    const isPhoneVerified = phoneVerified === true || phoneVerified === 1
+    
     if (!user.strigaUserId) {
       stage = 'form' // Need to fill the form
-    } else if (!emailVerified) {
+    } else if (!isEmailVerified) {
       stage = 'email_verification' // Need to verify email
-    } else if (!phoneVerified) {
+    } else if (!isPhoneVerified) {
       stage = 'mobile_verification' // Need to verify mobile
     } else if (actualKycStatus === 'PASSED') {
       stage = 'kyc_passed' // Already completed and approved
@@ -154,6 +176,22 @@ export async function GET(request: NextRequest) {
         country: user.profile.country || 'PT'
       }
     } : null
+
+    console.log('[KYC Status] Final response data:', {
+      stage,
+      emailVerified: !!emailVerified,
+      phoneVerified,
+      phoneVerifiedType: typeof phoneVerified,
+      phoneVerifiedValue: phoneVerified,
+      phoneVerifiedBoolean: !!phoneVerified,
+      userPhoneVerified: user.phoneVerified,
+      stageLogic: {
+        hasStrigaUserId: !!user.strigaUserId,
+        emailVerifiedCheck: !!emailVerified,
+        phoneVerifiedCheck: !!phoneVerified,
+        notPhoneVerified: !phoneVerified
+      }
+    })
 
     return NextResponse.json({
       stage,
@@ -194,6 +232,8 @@ export async function POST(request: NextRequest) {
       mappedStatus = 'REJECTED'
     } else if (kycStatus === 'PENDING' || kycStatus === 'IN_REVIEW') {
       mappedStatus = 'INITIATED'
+    } else if (kycStatus === 'NOT_STARTED') {
+      mappedStatus = 'PENDING' // Map NOT_STARTED to PENDING
     }
     
     // Update user KYC status
