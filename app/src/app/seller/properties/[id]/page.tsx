@@ -77,6 +77,8 @@ export default function PropertyManagementPage() {
   const [transactions, setTransactions] = useState<any[]>([])
   const [documents, setDocuments] = useState<any[]>([])
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(true)
+  const [interests, setInterests] = useState<any[]>([])
+  const [isLoadingInterests, setIsLoadingInterests] = useState(true)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -87,6 +89,7 @@ export default function PropertyManagementPage() {
     fetchPropertyDetails()
     fetchPropertyTransactions()
     fetchPropertyDocuments()
+    fetchPropertyInterests()
   }, [session, status, id])
 
   const fetchPropertyDetails = async () => {
@@ -132,6 +135,21 @@ export default function PropertyManagementPage() {
       console.error('Error fetching documents:', error)
     } finally {
       setIsLoadingDocuments(false)
+    }
+  }
+
+  const fetchPropertyInterests = async () => {
+    try {
+      setIsLoadingInterests(true)
+      const response = await fetch(`/api/properties/${id}/interests`)
+      if (response.ok) {
+        const data = await response.json()
+        setInterests(data.interests || [])
+      }
+    } catch (error) {
+      console.error('Error fetching interests:', error)
+    } finally {
+      setIsLoadingInterests(false)
     }
   }
 
@@ -373,23 +391,51 @@ export default function PropertyManagementPage() {
                     {transactions.map((transaction) => (
                       <div key={transaction.id} className="border rounded-lg p-4">
                         <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium">
-                              Offer from Buyer
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <p className="font-medium">
+                                Offer from {transaction.buyer?.firstName || ''} {transaction.buyer?.lastName || transaction.buyer?.email}
+                              </p>
+                              <Badge className={
+                                transaction.status === 'ACCEPTED' ? 'bg-green-100 text-green-800' :
+                                transaction.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                                transaction.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                                transaction.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' :
+                                'bg-gray-100 text-gray-800'
+                              }>
+                                {transaction.status}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Offer: €{Number(transaction.offerPrice).toLocaleString()}
                             </p>
-                            <p className="text-sm text-gray-600">
-                              €{transaction.offerAmount.toLocaleString()} • Status: {transaction.status}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {new Date(transaction.createdAt).toLocaleDateString()}
+                            {transaction.offerMessage && (
+                              <p className="text-sm text-gray-500 mt-1 italic">
+                                "{transaction.offerMessage}"
+                              </p>
+                            )}
+                            {transaction.counterOffersCount > 0 && (
+                              <p className="text-sm text-blue-600 mt-1">
+                                {transaction.counterOffersCount} counter offer{transaction.counterOffersCount !== 1 ? 's' : ''}
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-500 mt-2">
+                              Submitted {new Date(transaction.createdAt).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit'
+                              })}
                             </p>
                           </div>
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => router.push(`/transactions/${transaction.id}`)}
+                            onClick={() => router.push(`/seller/transactions/${transaction.id}`)}
+                            className="ml-4"
                           >
-                            View Details
+                            Manage Offer
                           </Button>
                         </div>
                       </div>
@@ -399,6 +445,94 @@ export default function PropertyManagementPage() {
                   <p className="text-center text-gray-500 py-8">
                     No transactions yet. When buyers make offers, they will appear here.
                   </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Property Interests */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Property Interests</span>
+                  <Users className="h-5 w-5 text-gray-400" />
+                </CardTitle>
+                <CardDescription>
+                  {interests.length} {interests.length === 1 ? 'person has' : 'people have'} expressed interest
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingInterests ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                    <span className="ml-2 text-gray-500">Loading interests...</span>
+                  </div>
+                ) : interests.length > 0 ? (
+                  <div className="space-y-4">
+                    {interests.map((interest) => (
+                      <div key={interest.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <p className="font-medium text-gray-900">
+                                {interest.buyerName}
+                              </p>
+                              <Badge 
+                                variant="outline" 
+                                className={
+                                  interest.buyerKycStatus === 'PASSED' 
+                                    ? 'bg-green-50 text-green-700 border-green-300'
+                                    : interest.buyerKycStatus === 'PENDING'
+                                    ? 'bg-yellow-50 text-yellow-700 border-yellow-300'
+                                    : 'bg-gray-50 text-gray-700 border-gray-300'
+                                }
+                              >
+                                {interest.buyerKycStatus === 'PASSED' && <CheckCircle className="h-3 w-3 mr-1" />}
+                                {interest.buyerKycStatus === 'PENDING' && <AlertCircle className="h-3 w-3 mr-1" />}
+                                KYC {interest.buyerKycStatus}
+                              </Badge>
+                            </div>
+                            <div className="mt-1 space-y-1">
+                              <p className="text-sm text-gray-600">
+                                {interest.buyerEmail}
+                              </p>
+                              {interest.buyerPhone && (
+                                <p className="text-sm text-gray-600">
+                                  {interest.buyerPhone}
+                                </p>
+                              )}
+                              <p className="text-xs text-gray-500">
+                                Interested since {new Date(interest.interestedAt).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: 'numeric',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                Member since {new Date(interest.buyerSince).toLocaleDateString()}
+                              </p>
+                            </div>
+                            {interest.message && (
+                              <div className="mt-3 p-3 bg-gray-50 rounded-md">
+                                <p className="text-sm text-gray-700 italic">"{interest.message}"</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">
+                      No one has expressed interest yet.
+                    </p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      When buyers show interest in your property, they will appear here.
+                    </p>
+                  </div>
                 )}
               </CardContent>
             </Card>

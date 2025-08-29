@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Search, FileText, CreditCard, Home, Shield, Loader2 } from 'lucide-react'
 import WalletDisplay from '@/components/wallet/wallet-display'
 import { RefreshWalletsButton } from '@/components/wallet/refresh-wallets-button'
+import { PropertyInterests } from '@/components/buyer/property-interests'
 
 export default function BuyerDashboard() {
   const { data: session, status } = useSession()
@@ -475,26 +476,27 @@ export default function BuyerDashboard() {
           </div>
         </div>
 
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Your transaction history</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {liveKycStatus !== 'PASSED' ? (
-              <div className="text-center py-8">
-                <Shield className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-sm text-gray-500">
-                  Complete KYC verification to start your property search journey.
-                </p>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500 text-center py-8">
-                No recent activity. Start by searching for properties.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        {/* Property Interests Section */}
+        <div className="mt-6">
+          {liveKycStatus === 'PASSED' ? (
+            <PropertyInterests />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>My Property Interests</CardTitle>
+                <CardDescription>Properties you've expressed interest in</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Shield className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-sm text-gray-500">
+                    Complete KYC verification to express interest in properties.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
       <Footer />
     </div>

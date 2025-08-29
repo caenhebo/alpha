@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -101,10 +99,48 @@ export async function POST(request: NextRequest) {
         propertyId: propertyId,
         buyerId: session.user.id,
         message: message || null
+      },
+      include: {
+        buyer: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        },
+        property: {
+          select: {
+            title: true,
+            code: true
+          }
+        }
       }
     })
 
-    // TODO: Send notification to seller about new interest
+    // Create notification for the seller
+    const buyerName = interest.buyer.firstName && interest.buyer.lastName 
+      ? `${interest.buyer.firstName} ${interest.buyer.lastName}`
+      : interest.buyer.email
+
+    await prisma.notification.create({
+      data: {
+        userId: property.sellerId,
+        type: 'PROPERTY_INTEREST',
+        title: 'New Interest in Your Property',
+        message: `${buyerName} has expressed interest in your property "${interest.property.title}" (${interest.property.code})`,
+        relatedEntityType: 'PROPERTY',
+        relatedEntityId: propertyId,
+        metadata: {
+          propertyId: propertyId,
+          propertyTitle: interest.property.title,
+          propertyCode: interest.property.code,
+          buyerId: interest.buyerId,
+          buyerName: buyerName,
+          buyerEmail: interest.buyer.email,
+          message: message || null
+        }
+      }
+    })
 
     return NextResponse.json({
       success: true,

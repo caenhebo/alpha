@@ -155,7 +155,5 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch transactions' },
       { status: 500 }
     )
-  } finally {
-    await prisma.$disconnect()
   }
 }

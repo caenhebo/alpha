@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Bell, Check, X, Clock, FileText, Home, DollarSign, Shield, Calendar } from 'lucide-react'
+import { Bell, Check, X, Clock, FileText, Home, DollarSign, Shield, Calendar, Users } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -15,10 +15,13 @@ interface Notification {
   title: string
   message: string
   data?: any
+  metadata?: any
   read: boolean
   readAt?: string
   transactionId?: string
   propertyId?: string
+  relatedEntityType?: string
+  relatedEntityId?: string
   createdAt: string
   updatedAt: string
 }
@@ -33,6 +36,8 @@ const getNotificationIcon = (type: string) => {
     case 'PROPERTY_APPROVED':
     case 'PROPERTY_REJECTED':
       return <Home className="h-5 w-5 text-blue-600" />
+    case 'PROPERTY_INTEREST':
+      return <Users className="h-5 w-5 text-indigo-600" />
     case 'DOCUMENT_UPLOADED':
       return <FileText className="h-5 w-5 text-purple-600" />
     case 'TRANSACTION_STATUS_CHANGE':
@@ -47,12 +52,33 @@ const getNotificationIcon = (type: string) => {
 }
 
 const getNotificationLink = (notification: Notification): string => {
+  // Handle transaction-related notifications
   if (notification.transactionId) {
     return `/transactions/${notification.transactionId}`
   }
-  if (notification.propertyId) {
-    return `/property/${notification.data?.property?.code || notification.propertyId}`
+  
+  // Handle property interest notifications for sellers
+  if (notification.type === 'PROPERTY_INTEREST' && notification.relatedEntityType === 'PROPERTY') {
+    return `/seller/properties/${notification.relatedEntityId || notification.propertyId}`
   }
+  
+  // Handle property-related notifications
+  if (notification.propertyId) {
+    return `/property/${notification.data?.property?.code || notification.metadata?.propertyCode || notification.propertyId}`
+  }
+  
+  // Handle other entity types
+  if (notification.relatedEntityType && notification.relatedEntityId) {
+    switch (notification.relatedEntityType) {
+      case 'PROPERTY':
+        return `/seller/properties/${notification.relatedEntityId}`
+      case 'TRANSACTION':
+        return `/transactions/${notification.relatedEntityId}`
+      default:
+        return '#'
+    }
+  }
+  
   return '#'
 }
 
