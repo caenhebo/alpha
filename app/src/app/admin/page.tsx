@@ -11,6 +11,7 @@ import StrigaConfig from '@/components/admin/striga-config'
 import SystemOverview from '@/components/admin/system-overview'
 import PropertyCompliance from '@/components/admin/property-compliance'
 import UserManagement from '@/components/admin/user-management'
+import { WalletMonitor } from '@/components/admin/wallet-monitor'
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession()
@@ -57,11 +58,12 @@ export default function AdminDashboard() {
         </div>
 
         <Tabs defaultValue={searchParams.get('tab') || "overview"} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="properties">Properties</TabsTrigger>
             <TabsTrigger value="striga">Striga API</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="wallets">Wallets</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
           </TabsList>
 
@@ -79,6 +81,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="users">
             <UserManagement />
+          </TabsContent>
+
+          <TabsContent value="wallets">
+            <WalletMonitor />
           </TabsContent>
 
           <TabsContent value="transactions">

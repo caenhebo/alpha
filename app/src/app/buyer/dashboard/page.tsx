@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Header from '@/components/header'
+import Footer from '@/components/footer'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -12,6 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Search, FileText, CreditCard, Home, Shield, Loader2 } from 'lucide-react'
 import WalletDisplay from '@/components/wallet/wallet-display'
+import { RefreshWalletsButton } from '@/components/wallet/refresh-wallets-button'
 
 export default function BuyerDashboard() {
   const { data: session, status } = useSession()
@@ -186,7 +188,7 @@ export default function BuyerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
@@ -453,11 +455,18 @@ export default function BuyerDashboard() {
                   />
                 ) : (
                   <Card>
-                    <CardContent className="text-center py-8">
-                      <CreditCard className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-sm text-gray-500">
-                        No wallets found. They will be created automatically during your first transaction.
-                      </p>
+                    <CardHeader>
+                      <CardTitle>Your Crypto Wallets</CardTitle>
+                      <CardDescription>Your wallets for property purchases</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <RefreshWalletsButton 
+                        onRefresh={fetchWallets}
+                        onSyncComplete={() => {
+                          fetchKycStatus()
+                          fetchWallets()
+                        }}
+                      />
                     </CardContent>
                   </Card>
                 )}
@@ -487,6 +496,7 @@ export default function BuyerDashboard() {
           </CardContent>
         </Card>
       </div>
+      <Footer />
     </div>
   )
 }

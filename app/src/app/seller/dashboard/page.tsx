@@ -4,11 +4,13 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Header from '@/components/header'
+import Footer from '@/components/footer'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Home, FileText, Users, TrendingUp, Shield, Loader2, Building } from 'lucide-react'
 import WalletDisplay from '@/components/wallet/wallet-display'
+import { RefreshWalletsButton } from '@/components/wallet/refresh-wallets-button'
 
 interface DashboardData {
   kycStatus: string
@@ -108,7 +110,7 @@ export default function SellerDashboard() {
   const { kycStatus, propertyStats, transactionStats, properties, totalProperties } = dashboardData
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
@@ -286,75 +288,23 @@ export default function SellerDashboard() {
                       Loading wallets...
                     </CardContent>
                   </Card>
-                ) : !dashboardData.hasWallets ? (
+                ) : (
                   <Card>
                     <CardHeader>
                       <CardTitle>Your Payment Account</CardTitle>
-                      <CardDescription>Your EUR account with banking details</CardDescription>
+                      <CardDescription>Your wallets and banking details</CardDescription>
                     </CardHeader>
-                    <CardContent className="text-center py-8">
-                      <Building className="h-12 w-12 text-blue-500 mx-auto mb-4" />
-                      <div className="space-y-4">
-                        <div>
-                          <p className="text-lg font-medium text-gray-900 mb-2">
-                            Set Up Your Payment Account
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Your KYC is approved! Create your EUR account to start receiving payments from buyers.
-                          </p>
-                        </div>
-                        
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium text-gray-700">KYC Status:</span>
-                            <span className="text-sm text-green-600 font-semibold flex items-center">
-                              <Shield className="h-4 w-4 mr-1" />
-                              Approved
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <Button 
-                          onClick={async () => {
-                            setIsLoadingWallets(true)
-                            try {
-                              const response = await fetch('/api/iban/create', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' }
-                              })
-                              
-                              if (response.ok) {
-                                setTimeout(() => {
-                                  fetchWallets()
-                                }, 2000)
-                              }
-                            } catch (error) {
-                              console.error('Error creating payment account:', error)
-                            }
-                          }}
-                          disabled={isLoadingWallets}
-                          className="w-full"
-                        >
-                          {isLoadingWallets ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Setting up account...
-                            </>
-                          ) : (
-                            <>
-                              <Building className="mr-2 h-4 w-4" />
-                              Set Up EUR Payment Account
-                            </>
-                          )}
-                        </Button>
-                        
-                        <p className="text-xs text-gray-500">
-                          This will create your EUR account with full banking details (IBAN, BIC) for receiving payments.
-                        </p>
-                      </div>
+                    <CardContent>
+                      <RefreshWalletsButton 
+                        onRefresh={fetchWallets}
+                        onSyncComplete={() => {
+                          fetchDashboard()
+                          fetchWallets()
+                        }}
+                      />
                     </CardContent>
                   </Card>
-                ) : null}
+                )}
               </div>
             )}
             
@@ -468,6 +418,7 @@ export default function SellerDashboard() {
           </CardContent>
         </Card>
       </div>
+      <Footer />
     </div>
   )
 }

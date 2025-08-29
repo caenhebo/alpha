@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           status: true,
-          offerAmount: true,
+          offerPrice: true,
           createdAt: true
         }
       }),

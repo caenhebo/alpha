@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Copy, CreditCard, Bitcoin, Eye, EyeOff, Wallet, Building } from 'lucide-react'
+import { RefreshWalletsButton } from './refresh-wallets-button'
 
 interface WalletBalance {
   currency: string
@@ -373,12 +374,13 @@ export default function WalletDisplay({ userRole, primaryWallet, allWallets, onR
 
   if (!primaryWallet) {
     return (
-      <Alert>
-        <CreditCard className="h-4 w-4" />
-        <AlertDescription>
-          No payment accounts found. Your account will be created automatically after KYC approval.
-        </AlertDescription>
-      </Alert>
+      <RefreshWalletsButton 
+        onRefresh={() => {
+          if (onRefresh) {
+            onRefresh()
+          }
+        }}
+      />
     )
   }
 
@@ -458,6 +460,7 @@ export default function WalletDisplay({ userRole, primaryWallet, allWallets, onR
           )}
         </CardContent>
       </Card>
+
 
       {/* See More Wallets Button */}
       {allWallets.length > 1 && (

@@ -284,15 +284,30 @@ async function createUserWallets(userId: string, strigaUserId: string) {
   
   for (const currency of currencies) {
     try {
-      // This would trigger wallet creation which will be confirmed via webhook
-      await fetch('/api/wallets/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: userId,
-          currency: currency
-        })
+      // Check if wallet already exists
+      const existingWallet = await prisma.wallet.findUnique({
+        where: {
+          userId_currency: {
+            userId: userId,
+            currency: currency
+          }
+        }
       })
+
+      if (existingWallet) {
+        console.log(`Wallet already exists for ${currency}`)
+        continue
+      }
+
+      // Import createWallet from striga lib
+      const { createWallet } = await import('@/lib/striga')
+      
+      // Create wallet directly via Striga API
+      const walletData = await createWallet(strigaUserId, currency)
+      
+      console.log(`Created ${currency} wallet for user ${userId}:`, walletData)
+      
+      // The wallet record will be created when we receive the WALLET_CREATED webhook
     } catch (error) {
       console.error(`Failed to create ${currency} wallet for user ${userId}:`, error)
     }
@@ -302,13 +317,28 @@ async function createUserWallets(userId: string, strigaUserId: string) {
 // Helper function to create digital IBAN
 async function createUserDigitalIban(userId: string, strigaUserId: string) {
   try {
-    await fetch('/api/iban/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: userId
-      })
+    // Check if IBAN already exists
+    const existingIban = await prisma.digitalIban.findFirst({
+      where: {
+        userId: userId,
+        active: true
+      }
     })
+
+    if (existingIban) {
+      console.log(`Digital IBAN already exists for user ${userId}`)
+      return
+    }
+
+    // Import createDigitalIban from striga lib
+    const { createDigitalIban } = await import('@/lib/striga')
+    
+    // Create IBAN directly via Striga API
+    const ibanData = await createDigitalIban(strigaUserId)
+    
+    console.log(`Created digital IBAN for user ${userId}:`, ibanData)
+    
+    // The IBAN record will be created when we receive the IBAN_CREATED webhook
   } catch (error) {
     console.error(`Failed to create digital IBAN for user ${userId}:`, error)
   }

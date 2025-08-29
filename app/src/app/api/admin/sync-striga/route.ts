@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { prisma } from '@/lib/prisma'
 import { strigaApiRequest } from '@/lib/striga'
+import { ensureUserWallets } from '@/lib/wallet-manager'
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -121,6 +122,15 @@ export async function POST(request: NextRequest) {
                 phoneVerified: strigaUser.KYC?.mobileVerified || false
               }
             })
+            
+            // If KYC was just approved, ensure wallets are created
+            if (mappedStatus === 'PASSED' && user.kycStatus !== 'PASSED') {
+              console.log(`[Admin Sync] KYC newly approved for ${user.email}, creating wallets...`)
+              const walletResult = await ensureUserWallets(user.id)
+              if (walletResult.created.length > 0) {
+                console.log(`[Admin Sync] Created ${walletResult.created.length} wallets for ${user.email}`)
+              }
+            }
             
             results.push({
               email: user.email,
